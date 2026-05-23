@@ -1,0 +1,7 @@
+{
+  "name": "excel-bullet-splitter-web",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Static web UI for splitting merged bullet cells in DKQHT/NLPC sheets."
+}

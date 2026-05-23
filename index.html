@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Tách Bullet Point trong Excel</title>
+<link rel="icon" href="data:," />
+<style>
+  :root {
+    --bg: #0b0d11;
+    --panel: #14181f;
+    --panel-2: #1b212a;
+    --panel-3: #232a35;
+    --text: #e7ecf3;
+    --muted: #8a94a6;
+    --muted-2: #6b7384;
+    --accent: #4f8cff;
+    --accent-2: #3a73e0;
+    --accent-soft: rgba(79, 140, 255, 0.12);
+    --ok: #2fbf71;
+    --ok-soft: rgba(47, 191, 113, 0.14);
+    --warn: #f0b429;
+    --err: #ef5350;
+    --border: #2a313b;
+    --border-soft: #1f242c;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI",
+          "Roboto", "Helvetica Neue", "Noto Sans", Arial, sans-serif;
+    background-color: var(--bg);
+    background-image: radial-gradient(1200px 600px at 50% -100px, #1a2436 0%, transparent 60%);
+    background-repeat: no-repeat;
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; }
+
+  header h1 {
+    font-size: 22px;
+    margin: 0 0 6px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  header .sub {
+    color: var(--muted);
+    margin: 0 0 28px;
+    font-size: 13px;
+  }
+  header .sub code, .footer code {
+    background: var(--panel-2);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  /* ---------- before / after preview ---------- */
+  .preview {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 0 0 24px;
+  }
+  .preview figure {
+    margin: 0;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .preview figcaption {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border-soft);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .preview figcaption .tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .preview .before .tag { background: rgba(240, 180, 41, 0.15); color: var(--warn); }
+  .preview .after  .tag { background: var(--ok-soft); color: var(--ok); }
+  .preview img {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: #fff;
+  }
+
+  /* ---------- card ---------- */
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .card-head h2 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .card-head .chev {
+    color: var(--muted-2);
+    transition: transform .15s;
+    font-size: 12px;
+  }
+  .card.collapsed .chev { transform: rotate(-90deg); }
+  .card.collapsed .card-body { display: none; }
+  .card-body { padding: 4px 16px 16px; }
+
+  /* ---------- form ---------- */
+  .field {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 12px 16px;
+    align-items: center;
+    padding: 10px 0;
+    border-top: 1px solid var(--border-soft);
+  }
+  .field:first-child { border-top: none; }
+  .field label.lbl {
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .field label.lbl small {
+    display: block;
+    color: var(--muted-2);
+    font-size: 11px;
+    font-weight: 400;
+    margin-top: 2px;
+  }
+  .field input[type="text"] {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    outline: none;
+    transition: border-color .12s;
+    width: 100%;
+  }
+  .field input[type="text"]:focus { border-color: var(--accent); }
+  .seg {
+    display: inline-flex;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 2px;
+  }
+  .seg button {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 6px 12px;
+    border-radius: 4px;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .seg button.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .check {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    color: var(--text);
+    font-size: 13px;
+  }
+  .check input { appearance: none; -webkit-appearance: none; margin: 0; }
+  .check .box {
+    width: 16px; height: 16px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    display: inline-grid;
+    place-items: center;
+    transition: background .12s, border-color .12s;
+  }
+  .check input:checked + .box {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .check .box::after {
+    content: "";
+    width: 8px;
+    height: 4px;
+    border-left: 2px solid #fff;
+    border-bottom: 2px solid #fff;
+    transform: rotate(-45deg) translate(1px, -1px);
+    opacity: 0;
+  }
+  .check input:checked + .box::after { opacity: 1; }
+
+  /* ---------- drop zone ---------- */
+  .drop {
+    display: block;
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 36px 24px;
+    text-align: center;
+    background: var(--panel);
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .drop:hover { border-color: var(--accent); background: var(--panel-2); }
+  .drop.drag { border-color: var(--accent); background: var(--accent-soft); }
+  .drop strong { color: var(--text); font-weight: 600; }
+  .drop p { margin: 0; color: var(--muted); }
+  .drop .hint { margin-top: 6px; font-size: 12px; color: var(--muted-2); }
+  .drop input { display: none; }
+
+  /* ---------- file list ---------- */
+  .files {
+    margin-top: 16px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: auto;
+    max-height: 360px;
+  }
+  .file-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 16px;
+    border-top: 1px solid var(--border-soft);
+    font-size: 13px;
+  }
+  .file-row:first-child { border-top: none; }
+  .file-name {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    color: var(--text);
+  }
+  .file-status {
+    color: var(--muted);
+    font-size: 12px;
+    min-width: 140px;
+    text-align: right;
+  }
+  .file-status.ok { color: var(--ok); }
+  .file-status.warn { color: var(--warn); }
+  .file-status.err { color: var(--err); }
+  .file-remove {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+  }
+  .file-remove:hover { color: var(--text); border-color: var(--muted); }
+
+  /* ---------- actions ---------- */
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  button.primary, button.success, button.ghost {
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .12s, color .12s, border-color .12s;
+  }
+  button.primary { background: var(--accent); color: white; }
+  button.primary:hover:not(:disabled) { background: var(--accent-2); }
+  button.primary:disabled {
+    background: var(--panel-3);
+    color: var(--muted-2);
+    cursor: not-allowed;
+  }
+  button.success { background: var(--ok); color: white; }
+  button.success:hover { background: #28a060; }
+  button.ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    font-weight: 500;
+  }
+  button.ghost:hover { color: var(--text); border-color: var(--muted); }
+
+  /* ---------- summary + log ---------- */
+  .summary {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: var(--ok-soft);
+    border: 1px solid rgba(47, 191, 113, 0.4);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 13px;
+  }
+  .summary.err {
+    background: rgba(239, 83, 80, 0.1);
+    border-color: rgba(239, 83, 80, 0.5);
+  }
+  .summary strong { color: var(--text); }
+  .summary[hidden] { display: none; }
+
+  details.log {
+    margin-top: 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 16px;
+  }
+  details.log summary {
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 12px;
+    list-style: none;
+  }
+  details.log summary::-webkit-details-marker { display: none; }
+  details.log summary::after { content: " ▾"; }
+  details.log[open] summary::after { content: " ▴"; }
+  details.log pre {
+    margin: 8px 0 0;
+    padding: 10px 12px;
+    background: var(--bg);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 12px;
+    line-height: 1.6;
+    max-height: 320px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .footer {
+    margin-top: 36px;
+    text-align: center;
+    color: var(--muted-2);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 560px) {
+    .wrap { padding: 28px 16px 56px; }
+    .field { grid-template-columns: 1fr; gap: 6px; }
+    .file-status { min-width: 0; }
+    .preview { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Tách Bullet Point trong Excel</h1>
+    <p class="sub">
+      Mở từng file <code>.xlsx</code>, tìm ô <strong>Nhận xét</strong> đã gộp
+      trong sheet đã chọn, tách mỗi bullet thành một dòng riêng, rồi đóng gói
+      tất cả kết quả thành một file ZIP.
+    </p>
+  </header>
+
+  <!-- ========== Before / After preview ========== -->
+  <section class="preview" aria-label="Minh hoạ trước và sau khi tách">
+    <figure class="before">
+      <figcaption>Trước <span class="tag">gộp một ô</span></figcaption>
+      <img src="public/images/before.png" alt="Ô Nhận xét bị gộp, tất cả bullet nằm chung một ô" loading="lazy" />
+    </figure>
+    <figure class="after">
+      <figcaption>Sau <span class="tag">tách theo dòng</span></figcaption>
+      <img src="public/images/after.png" alt="Mỗi bullet nằm trên một dòng riêng, thẳng hàng với phẩm chất" loading="lazy" />
+    </figure>
+  </section>
+
+  <!-- ========== Config ========== -->
+  <section class="card" id="cfg-card">
+    <div class="card-head" id="cfg-toggle">
+      <h2>Cấu hình</h2>
+      <span class="chev">▾</span>
+    </div>
+    <div class="card-body">
+      <div class="field">
+        <label class="lbl" for="cfg-sheets">
+          Sheet cần xử lý
+          <small>Cách nhau bởi dấu phẩy. Mặc định: <code>DKQHT, NLPC</code></small>
+        </label>
+        <input type="text" id="cfg-sheets" value="DKQHT, NLPC" placeholder="DKQHT, NLPC" />
+      </div>
+
+      <div class="field">
+        <label class="lbl">
+          Phát hiện bullet
+          <small>Nghiêm ngặt: dòng đầu phải bắt đầu bằng "-". Linh hoạt: cho phép có một dòng tiền tố (vd "26.") trước bullet.</small>
+        </label>
+        <div class="seg" data-name="bulletDetection">
+          <button type="button" data-val="tolerant" class="active">Linh hoạt</button>
+          <button type="button" data-val="strict">Nghiêm ngặt</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="lbl">
+          Viền ô
+          <small>Bật để áp dụng viền đầy đủ (trên/dưới/trái/phải) cho mọi ô đã tách. Tắt nếu muốn giữ style gốc.</small>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="cfg-fullbox" checked />
+          <span class="box"></span>
+          <span>Áp dụng viền đầy đủ cho ô sau khi tách</span>
+        </label>
+      </div>
+
+      <div class="field">
+        <label class="lbl">
+          Tên file kết quả
+          <small>Tiền tố và hậu tố sẽ ghép vào tên gốc (giữ nguyên phần đuôi <code>.xlsx</code>).</small>
+        </label>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input type="text" id="cfg-prefix" placeholder="Tiền tố (vd: split-)" style="flex:1;" />
+          <span style="color: var(--muted-2);">tên-gốc</span>
+          <input type="text" id="cfg-suffix" placeholder="Hậu tố (vd: -đã-tách)" style="flex:1;" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Drop ========== -->
+  <label class="drop" id="drop">
+    <input type="file" id="file-input" multiple accept=".xlsx" />
+    <p><strong>Kéo thả file .xlsx vào đây</strong> hoặc nhấp để chọn</p>
+    <p class="hint">Có thể chọn nhiều file cùng lúc</p>
+  </label>
+
+  <!-- ========== Files ========== -->
+  <div class="files" id="files" hidden></div>
+
+  <div class="actions">
+    <button class="primary" id="run" disabled>Xử lý file</button>
+    <button class="ghost" id="clear" hidden>Xóa danh sách</button>
+    <button class="success" id="download" hidden>Tải xuống (.zip)</button>
+  </div>
+
+  <div class="summary" id="summary" hidden></div>
+  <details class="log" id="log-wrap" hidden>
+    <summary>Nhật ký xử lý</summary>
+    <pre id="log"></pre>
+  </details>
+
+  <p class="footer">
+    Cùng thuật toán với công cụ chạy cục bộ
+    <code>split-bullets-surgical.js</code>: chỉ chỉnh sửa XML của các sheet
+    được chọn và shared strings; phần còn lại của workbook được giữ nguyên
+    byte-for-byte.
+  </p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script type="module">
+  import { processWorkbookBuffer, decorateFilename } from './splitter.js';
+
+  // ---------- DOM refs ----------
+  const cfgToggle = document.getElementById('cfg-toggle');
+  const cfgCard = document.getElementById('cfg-card');
+  const inputSheets = document.getElementById('cfg-sheets');
+  const inputPrefix = document.getElementById('cfg-prefix');
+  const inputSuffix = document.getElementById('cfg-suffix');
+  const inputFullbox = document.getElementById('cfg-fullbox');
+  const segDetection = document.querySelector('.seg[data-name="bulletDetection"]');
+
+  const dropEl = document.getElementById('drop');
+  const inputEl = document.getElementById('file-input');
+  const filesEl = document.getElementById('files');
+  const runBtn = document.getElementById('run');
+  const clearBtn = document.getElementById('clear');
+  const downloadBtn = document.getElementById('download');
+  const summaryEl = document.getElementById('summary');
+  const logWrap = document.getElementById('log-wrap');
+  const logEl = document.getElementById('log');
+
+  // ---------- state ----------
+  let items = [];
+  let resultZipBlob = null;
+  let bulletDetection = 'tolerant';
+
+  // ---------- config events ----------
+  cfgToggle.addEventListener('click', () => {
+    cfgCard.classList.toggle('collapsed');
+  });
+  segDetection.addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    bulletDetection = btn.dataset.val;
+    segDetection.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+  });
+
+  function getConfig() {
+    const sheetNames = inputSheets.value.split(',').map(s => s.trim()).filter(Boolean);
+    return {
+      sheetNames: sheetNames.length ? sheetNames : ['DKQHT', 'NLPC'],
+      bulletDetection,
+      applyFullBorder: inputFullbox.checked,
+      filenamePrefix: inputPrefix.value || '',
+      filenameSuffix: inputSuffix.value || '',
+    };
+  }
+
+  // ---------- file list ----------
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+  function render() {
+    filesEl.hidden = items.length === 0;
+    clearBtn.hidden = items.length === 0;
+    runBtn.disabled = items.length === 0;
+    filesEl.innerHTML = '';
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      const row = document.createElement('div');
+      row.className = 'file-row';
+      row.innerHTML = `
+        <div class="file-name">${escapeHtml(it.file.name)}</div>
+        <div class="file-status ${it.statusClass}">${escapeHtml(it.status)}</div>
+        <button class="file-remove" data-i="${i}">Bỏ</button>
+      `;
+      filesEl.appendChild(row);
+    }
+  }
+  function addFiles(fileList) {
+    const accepted = [...fileList].filter(f =>
+      f.name.toLowerCase().endsWith('.xlsx') && !f.name.startsWith('~$')
+    );
+    for (const f of accepted) {
+      if (items.some(it => it.file.name === f.name && it.file.size === f.size)) continue;
+      items.push({ file: f, status: 'chờ xử lý', statusClass: '' });
+    }
+    resultZipBlob = null;
+    downloadBtn.hidden = true;
+    summaryEl.hidden = true;
+    logWrap.hidden = true;
+    render();
+  }
+
+  // No manual click handler - the <input> inside <label> opens the picker
+  // natively. Triggering inputEl.click() here would open it twice.
+  inputEl.addEventListener('change', () => {
+    addFiles(inputEl.files);
+    inputEl.value = '';
+  });
+  ['dragenter','dragover'].forEach(ev => dropEl.addEventListener(ev, e => {
+    e.preventDefault(); dropEl.classList.add('drag');
+  }));
+  ['dragleave','drop'].forEach(ev => dropEl.addEventListener(ev, e => {
+    e.preventDefault(); dropEl.classList.remove('drag');
+  }));
+  dropEl.addEventListener('drop', e => {
+    if (e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files);
+  });
+  filesEl.addEventListener('click', e => {
+    const btn = e.target.closest('.file-remove');
+    if (!btn) return;
+    items.splice(+btn.dataset.i, 1);
+    render();
+  });
+  clearBtn.addEventListener('click', () => {
+    items = [];
+    resultZipBlob = null;
+    downloadBtn.hidden = true;
+    summaryEl.hidden = true;
+    logWrap.hidden = true;
+    render();
+  });
+
+  // ---------- run ----------
+  runBtn.addEventListener('click', async () => {
+    runBtn.disabled = true;
+    clearBtn.disabled = true;
+    summaryEl.hidden = true;
+    downloadBtn.hidden = true;
+    const cfg = getConfig();
+    const fullLog = [];
+    let okCount = 0, errCount = 0, splitCount = 0;
+    const outZip = new JSZip();
+    const usedNames = new Set();
+
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      it.status = 'đang xử lý…';
+      it.statusClass = '';
+      render();
+      try {
+        const buf = await it.file.arrayBuffer();
+        const result = await processWorkbookBuffer(buf, cfg);
+        const { blob, log, totalSplits, sheetsMissing } = result;
+        it.blob = blob;
+        splitCount += totalSplits;
+        okCount++;
+        if (totalSplits === 0) {
+          it.status = 'không tìm thấy bullet';
+          it.statusClass = 'warn';
+        } else {
+          it.status = `tách ${totalSplits} cụm`;
+          it.statusClass = 'ok';
+        }
+        let outName = decorateFilename(it.file.name, cfg.filenamePrefix, cfg.filenameSuffix);
+        let n = 1;
+        while (usedNames.has(outName)) {
+          const dot = outName.lastIndexOf('.');
+          outName = outName.slice(0, dot) + ` (${n})` + outName.slice(dot);
+          n++;
+        }
+        usedNames.add(outName);
+        outZip.file(outName, blob);
+
+        fullLog.push(`[${it.file.name}]`);
+        if (sheetsMissing.length) {
+          fullLog.push(`  ⚠ sheet không tồn tại: ${sheetsMissing.join(', ')}`);
+        }
+        for (const ln of log) fullLog.push(`  ${ln}`);
+        if (!log.length && !sheetsMissing.length) fullLog.push('  (không có cụm bullet nào để tách)');
+      } catch (e) {
+        errCount++;
+        it.status = 'lỗi';
+        it.statusClass = 'err';
+        fullLog.push(`[${it.file.name}] LỖI: ${e && e.message || e}`);
+      }
+      render();
+    }
+
+    const zipBlob = await outZip.generateAsync({
+      type: 'blob',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 },
+    });
+    resultZipBlob = zipBlob;
+
+    summaryEl.classList.toggle('err', errCount > 0 && okCount === 0);
+    summaryEl.innerHTML = `
+      Đã xử lý <strong>${okCount}</strong> file ·
+      tách được <strong>${splitCount}</strong> cụm bullet ·
+      <strong>${errCount}</strong> lỗi.
+    `;
+    summaryEl.hidden = false;
+    logEl.textContent = fullLog.join('\n');
+    logWrap.hidden = false;
+
+    if (okCount > 0) downloadBtn.hidden = false;
+    runBtn.disabled = false;
+    clearBtn.disabled = false;
+  });
+
+  downloadBtn.addEventListener('click', () => {
+    if (!resultZipBlob) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(resultZipBlob);
+    a.download = 'output.zip';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
+  });
+</script>
+</body>
+</html>
