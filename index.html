@@ -369,12 +369,39 @@
     word-break: break-all;
   }
 
-  .footer {
-    margin-top: 36px;
-    text-align: center;
+  .site-footer {
+    margin-top: 48px;
+    padding: 20px 0 8px;
+    border-top: 1px solid var(--border-soft);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     color: var(--muted-2);
     font-size: 12px;
     line-height: 1.6;
+    flex-wrap: wrap;
+  }
+  .site-footer .copy { color: var(--muted); }
+  .site-footer .brand {
+    color: var(--text);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .site-footer .brand:hover { color: var(--accent); }
+  .site-footer .links { display: inline-flex; gap: 16px; align-items: center; }
+  .site-footer .links a {
+    color: var(--muted-2);
+    text-decoration: none;
+  }
+  .site-footer .links a:hover { color: var(--text); }
+  .site-footer .dot {
+    width: 3px; height: 3px; border-radius: 50%;
+    background: var(--border);
+    display: inline-block;
+  }
+  @media (max-width: 480px) {
+    .site-footer { flex-direction: column; align-items: flex-start; }
   }
 
   @media (max-width: 560px) {
@@ -482,7 +509,17 @@
     <pre id="log"></pre>
   </details>
 
-  <p class="footer">minhdevtree</p>
+  <footer class="site-footer">
+    <div class="copy">
+      © <span id="year">2026</span> ·
+      Tạo bởi <a class="brand" href="https://github.com/minhdevtree" target="_blank" rel="noopener noreferrer">minhdevtree</a>
+    </div>
+    <div class="links">
+      <a href="https://github.com/minhdevtree" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <span class="dot"></span>
+      <span>Xử lý cục bộ — không tải file lên server</span>
+    </div>
+  </footer>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -490,6 +527,8 @@
   import { processWorkbookBuffer, decorateFilename } from './splitter.js';
 
   // ---------- DOM refs ----------
+  document.getElementById('year').textContent = new Date().getFullYear();
+
   const cfgToggle = document.getElementById('cfg-toggle');
   const cfgCard = document.getElementById('cfg-card');
   const inputSheets = document.getElementById('cfg-sheets');
