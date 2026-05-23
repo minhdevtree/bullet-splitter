@@ -315,6 +315,36 @@
   }
   .file-remove:hover { color: var(--text); border-color: var(--muted); }
 
+  /* ---------- spinner ---------- */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: -2px;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+  /* Defeat .spinner's display:inline-block when the `hidden` attribute is set */
+  .spinner[hidden] { display: none; }
+  .file-status.proc { color: var(--accent); display: inline-flex; align-items: center; justify-content: flex-end; }
+  .file-status.proc .spinner {
+    width: 11px;
+    height: 11px;
+    border-width: 1.5px;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  /* dim form controls while running */
+  .wrap.busy .card,
+  .wrap.busy .drop,
+  .wrap.busy .file-remove { pointer-events: none; opacity: 0.55; }
+
   /* ---------- actions ---------- */
   .actions {
     display: flex;
@@ -322,6 +352,7 @@
     margin-top: 16px;
     flex-wrap: wrap;
   }
+  button.primary { display: inline-flex; align-items: center; }
   button.primary, button.success, button.ghost {
     border: none;
     padding: 10px 18px;
@@ -541,7 +572,10 @@
   <div class="files" id="files" hidden></div>
 
   <div class="actions">
-    <button class="primary" id="run" disabled>Xử lý file</button>
+    <button class="primary" id="run" disabled>
+      <span class="spinner" id="run-spinner" hidden aria-hidden="true"></span>
+      <span id="run-label">Xử lý file</span>
+    </button>
     <button class="ghost" id="clear" hidden>Xóa danh sách</button>
     <button class="success" id="download" hidden>Tải xuống (.zip)</button>
   </div>
@@ -585,11 +619,14 @@
   const inputEl = document.getElementById('file-input');
   const filesEl = document.getElementById('files');
   const runBtn = document.getElementById('run');
+  const runSpinner = document.getElementById('run-spinner');
+  const runLabel = document.getElementById('run-label');
   const clearBtn = document.getElementById('clear');
   const downloadBtn = document.getElementById('download');
   const summaryEl = document.getElementById('summary');
   const logWrap = document.getElementById('log-wrap');
   const logEl = document.getElementById('log');
+  const wrapEl = document.querySelector('.wrap');
 
   // ---------- state ----------
   let items = [];
@@ -634,13 +671,24 @@
       const it = items[i];
       const row = document.createElement('div');
       row.className = 'file-row';
+      const spinHtml = it.statusClass === 'proc'
+        ? '<span class="spinner" aria-hidden="true"></span>'
+        : '';
       row.innerHTML = `
         <div class="file-name">${escapeHtml(it.file.name)}</div>
-        <div class="file-status ${it.statusClass}">${escapeHtml(it.status)}</div>
+        <div class="file-status ${it.statusClass}">${spinHtml}${escapeHtml(it.status)}</div>
         <button class="file-remove" data-i="${i}">Bỏ</button>
       `;
       filesEl.appendChild(row);
     }
+  }
+  function setBusy(on, progress) {
+    wrapEl.classList.toggle('busy', on);
+    runSpinner.hidden = !on;
+    runBtn.disabled = on || items.length === 0;
+    runLabel.textContent = on
+      ? (progress ? `Đang xử lý ${progress.i}/${progress.total}…` : 'Đang xử lý…')
+      : 'Xử lý file';
   }
   function addFiles(fileList) {
     const accepted = [...fileList].filter(f =>
@@ -689,10 +737,14 @@
 
   // ---------- run ----------
   runBtn.addEventListener('click', async () => {
-    runBtn.disabled = true;
     clearBtn.disabled = true;
     summaryEl.hidden = true;
     downloadBtn.hidden = true;
+    setBusy(true, { i: 0, total: items.length });
+    // yield once so the browser paints the loading state before the heavy
+    // synchronous JSZip work begins
+    await new Promise(r => requestAnimationFrame(() => r()));
+
     const cfg = getConfig();
     const fullLog = [];
     let okCount = 0, errCount = 0, splitCount = 0;
@@ -702,7 +754,8 @@
     for (let i = 0; i < items.length; i++) {
       const it = items[i];
       it.status = 'đang xử lý…';
-      it.statusClass = '';
+      it.statusClass = 'proc';
+      setBusy(true, { i: i + 1, total: items.length });
       render();
       try {
         const buf = await it.file.arrayBuffer();
@@ -761,7 +814,7 @@
     logWrap.hidden = false;
 
     if (okCount > 0) downloadBtn.hidden = false;
-    runBtn.disabled = false;
+    setBusy(false);
     clearBtn.disabled = false;
   });
 
