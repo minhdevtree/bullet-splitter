@@ -266,7 +266,8 @@ export async function processWorkbookBuffer(arrayBuffer, opts = {}) {
   };
 
   const log = [];
-  let totalSplits = 0;
+  let totalSplits = 0;   // number of multi-row merges that got split
+  let totalRows = 0;     // number of bullet lines we wrote (sum across merges)
   const sheetsProcessed = [];
   const sheetsMissing = [];
 
@@ -305,6 +306,10 @@ export async function processWorkbookBuffer(arrayBuffer, opts = {}) {
       const r = parseRef(entry.ref);
       if (!r) continue;
       if (r.bottom <= r.top) continue;
+      // Skip full-width content blocks (Khen thưởng, "5. Khen thưởng", etc).
+      // Those always start at column A; real Nhận xét merges start at column
+      // J or further right, never at A.
+      if (r.left === 1) continue;
       const leftCol = idxToCol(r.left);
 
       const masterCellInfo = findRowCell(sheetXml, leftCol, r.top);
@@ -399,6 +404,7 @@ export async function processWorkbookBuffer(arrayBuffer, opts = {}) {
     for (const r of toReplace) {
       log.push(`${name}: ${r.oldEntry.ref} → ${r.newRefs.length} dòng`);
       totalSplits++;
+      totalRows += r.newRefs.length;
     }
   }
 
@@ -417,7 +423,8 @@ export async function processWorkbookBuffer(arrayBuffer, opts = {}) {
   return {
     blob: outBlob,
     log,
-    totalSplits,
+    totalSplits,   // count of merge groups that were split
+    totalRows,     // count of bullet lines written
     sheetsProcessed,
     sheetsMissing,
   };

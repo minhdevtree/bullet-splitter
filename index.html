@@ -747,7 +747,7 @@
 
     const cfg = getConfig();
     const fullLog = [];
-    let okCount = 0, errCount = 0, splitCount = 0;
+    let okCount = 0, errCount = 0, splitCount = 0, rowCount = 0;
     const outZip = new JSZip();
     const usedNames = new Set();
 
@@ -760,15 +760,16 @@
       try {
         const buf = await it.file.arrayBuffer();
         const result = await processWorkbookBuffer(buf, cfg);
-        const { blob, log, totalSplits, sheetsMissing } = result;
+        const { blob, log, totalSplits, totalRows, sheetsMissing } = result;
         it.blob = blob;
         splitCount += totalSplits;
+        rowCount += totalRows;
         okCount++;
         if (totalSplits === 0) {
           it.status = 'không tìm thấy bullet';
           it.statusClass = 'warn';
         } else {
-          it.status = `tách ${totalSplits} cụm`;
+          it.status = `tách ${totalRows} dòng`;
           it.statusClass = 'ok';
         }
         let outName = decorateFilename(it.file.name, cfg.filenamePrefix, cfg.filenameSuffix);
@@ -806,7 +807,8 @@
     summaryEl.classList.toggle('err', errCount > 0 && okCount === 0);
     summaryEl.innerHTML = `
       Đã xử lý <strong>${okCount}</strong> file ·
-      tách được <strong>${splitCount}</strong> cụm bullet ·
+      tách <strong>${rowCount}</strong> dòng từ
+      <strong>${splitCount}</strong> ô gộp ·
       <strong>${errCount}</strong> lỗi.
     `;
     summaryEl.hidden = false;
