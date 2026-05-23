@@ -45,27 +45,43 @@ function xmlUnescape(s) {
     .replace(/&amp;/g, '&');
 }
 
+// Recognises any of the common list markers at the start of a trimmed line:
+//   - – — • * + · ▪ ▶ → ►   (one or more, e.g. "-- xxx" also works)
+//   1.  2)  10.  10)        (numbered)
+//   a.  a)  I.              (single-letter / roman start)
+// Followed by optional spaces/tabs.
+const BULLET_RE = /^(?:[-–—•*+·▪▶→►]+|[0-9]+[.)]|[A-Za-z][.)])[ \t]*/;
+
+function isBulletLine(s) { return BULLET_RE.test(s); }
+
 function makeBulletDetector(mode) {
-  // 'strict': trimmed text starts with "-" AND has another "\n-"
-  // 'tolerant': at least 2 trimmed lines start with "-"
+  // 'strict': first trimmed line is a bullet AND there's another bullet
+  //           line further down.
+  // 'tolerant': at least 2 lines are bullets anywhere in the text — allows
+  //             a non-bullet preamble such as "26.\n- abc\n- def".
   if (mode === 'strict') {
     return text => {
       if (!text) return false;
-      const t = text.trim();
-      if (!t.startsWith('-')) return false;
-      return /\r?\n\s*-/.test(text);
+      const lines = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      if (lines.length < 2) return false;
+      return isBulletLine(lines[0]) && lines.slice(1).some(isBulletLine);
     };
   }
   return text => {
     if (!text) return false;
     const lines = text.split(/\r?\n/).map(s => s.trim());
-    return lines.filter(l => l.startsWith('-')).length >= 2;
+    return lines.filter(isBulletLine).length >= 2;
   };
 }
 function splitBullets(text, mode) {
   const lines = text.split(/\r?\n/).map(s => s.trim());
   if (mode === 'strict') return lines.filter(s => s.length > 0);
-  return lines.filter(s => s.startsWith('-'));
+  return lines.filter(isBulletLine);
+}
+// Strip the list marker plus any spaces/tabs after it. Leaves non-bullet
+// lines untouched (no-op when there's nothing to strip).
+function stripLeadingBullet(line) {
+  return line.replace(BULLET_RE, '');
 }
 
 function parseSharedStrings(xml) {
@@ -191,6 +207,7 @@ function findFullBoxXfs(stylesXml) {
  *   sheetNames?: string[],
  *   bulletDetection?: 'strict'|'tolerant',
  *   applyFullBorder?: boolean,
+ *   stripBulletPrefix?: boolean,
  * }} [opts]
  */
 export async function processWorkbookBuffer(arrayBuffer, opts = {}) {
@@ -199,6 +216,7 @@ export async function processWorkbookBuffer(arrayBuffer, opts = {}) {
     : ['DKQHT', 'NLPC'];
   const mode = opts.bulletDetection === 'strict' ? 'strict' : 'tolerant';
   const applyFullBorder = opts.applyFullBorder !== false;
+  const stripBullet = opts.stripBulletPrefix !== false; // default on
   const isBulletList = makeBulletDetector(mode);
 
   const zip = await JSZip.loadAsync(arrayBuffer);
@@ -291,7 +309,8 @@ export async function processWorkbookBuffer(arrayBuffer, opts = {}) {
       }
       if (text == null || !isBulletList(text)) continue;
 
-      const bullets = splitBullets(text, mode);
+      const bullets = splitBullets(text, mode)
+        .map(b => stripBullet ? stripLeadingBullet(b) : b);
       const rows = [];
       for (let i = 0; i < r.bottom - r.top + 1; i++) {
         const rowNum = r.top + i;

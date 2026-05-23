@@ -479,12 +479,29 @@
       <div class="field">
         <label class="lbl">
           Phát hiện bullet
-          <small>Nghiêm ngặt: dòng đầu phải bắt đầu bằng "-". Linh hoạt: cho phép có một dòng tiền tố (vd "26.") trước bullet.</small>
+          <small>
+            Tự động nhận diện các dấu đầu dòng phổ biến:
+            <code>-</code> <code>•</code> <code>*</code> <code>+</code>
+            <code>1.</code> <code>2)</code> <code>a.</code> …<br />
+            Nghiêm ngặt: dòng đầu phải là bullet. Linh hoạt: cho phép có một dòng tiền tố (vd "26.") trước bullet.
+          </small>
         </label>
         <div class="seg" data-name="bulletDetection">
           <button type="button" data-val="tolerant" class="active">Linh hoạt</button>
           <button type="button" data-val="strict">Nghiêm ngặt</button>
         </div>
+      </div>
+
+      <div class="field">
+        <label class="lbl">
+          Ký tự đầu dòng
+          <small>Bật để xoá dấu đánh dấu (<code>-</code>, <code>•</code>, <code>1.</code>, <code>a)</code>…) và khoảng trắng ở đầu mỗi dòng sau khi tách. Tắt để giữ nguyên.</small>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="cfg-strip" checked />
+          <span class="box"></span>
+          <span>Bỏ ký tự đánh dấu ở đầu mỗi dòng</span>
+        </label>
       </div>
 
       <div class="field">
@@ -561,6 +578,7 @@
   const inputPrefix = document.getElementById('cfg-prefix');
   const inputSuffix = document.getElementById('cfg-suffix');
   const inputFullbox = document.getElementById('cfg-fullbox');
+  const inputStrip = document.getElementById('cfg-strip');
   const segDetection = document.querySelector('.seg[data-name="bulletDetection"]');
 
   const dropEl = document.getElementById('drop');
@@ -595,6 +613,7 @@
       sheetNames: sheetNames.length ? sheetNames : ['DKQHT', 'NLPC'],
       bulletDetection,
       applyFullBorder: inputFullbox.checked,
+      stripBulletPrefix: inputStrip.checked,
       filenamePrefix: inputPrefix.value || '',
       filenameSuffix: inputSuffix.value || '',
     };
