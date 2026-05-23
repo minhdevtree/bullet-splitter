@@ -33,20 +33,10 @@ npx serve .
 
 No build step is required — GitHub Pages serves the files as-is.
 
-## Deploy to Vercel (alternative)
-
-```powershell
-npm i -g vercel
-vercel
-```
-
-Answer the prompts: framework `Other`, no build command, output dir `.`.
-Subsequent deploys: `vercel --prod`.
-
 ## Files
 
 - `index.html` — UI: drop zone, file list, run button, ZIP download.
 - `splitter.js` — browser splitter (surgical xlsx editor).
 - `public/images/` — before/after preview screenshots shown in the UI.
-- `vercel.json`, `package.json` — only used by Vercel / local Node testing.
-  GitHub Pages ignores them.
+- `package.json` — only used for optional local Node testing; GitHub Pages
+  ignores it.
