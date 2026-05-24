@@ -102,6 +102,15 @@ function stripLeadingBullet(line) {
   return line.replace(BULLET_RE, '');
 }
 
+// xlsx stores control characters like CR/LF inside <t> as the literal
+// 7-char sequence "_x000D_" / "_x000A_". Decode all such _xHHHH_ escapes so
+// line-splitting on \r?\n works the same regardless of how Excel wrote it.
+function decodeXlsxEscapes(s) {
+  return s.replace(/_x([0-9A-Fa-f]{4})_/g, (_, hex) =>
+    String.fromCharCode(parseInt(hex, 16))
+  );
+}
+
 function parseSharedStrings(xml) {
   const items = [];
   const re = /<si\b[^>]*>([\s\S]*?)<\/si>/g;
@@ -112,9 +121,34 @@ function parseSharedStrings(xml) {
     const tre = /<t\b[^>]*>([\s\S]*?)<\/t>/g;
     let tm;
     while ((tm = tre.exec(inner)) !== null) text += tm[1];
-    items.push(xmlUnescape(text));
+    items.push(decodeXlsxEscapes(xmlUnescape(text)));
   }
   return items;
+}
+
+// Strip a pair of matching surrounding quote characters (straight or curly,
+// single or double). Some workbooks wrap multi-line Nhận xét content in
+// outer quotes; we want the raw lines.
+function stripSurroundingQuotes(s) {
+  if (!s) return s;
+  const t = s.trim();
+  if (t.length < 2) return s;
+  const first = t[0], last = t[t.length - 1];
+  const pairs = { '"': '"', "'": "'", '“': '”', '‘': '’', '«': '»' };
+  if (pairs[first] && pairs[first] === last) return t.slice(1, -1);
+  return s;
+}
+
+// Fallback for text without bullet markers: when the number of non-empty
+// lines exactly matches the merge's row count we treat each line as a
+// per-row comment. Returns the lines array, or null when we shouldn't
+// split.
+function tryLineFallback(text, expectedRows) {
+  if (!text || expectedRows < 2) return null;
+  const stripped = stripSurroundingQuotes(text);
+  const lines = stripped.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (lines.length === expectedRows && lines.length >= 2) return lines;
+  return null;
 }
 
 function appendSharedStrings(xml, newStrings) {
@@ -322,18 +356,29 @@ export async function processWorkbookBuffer(arrayBuffer, opts = {}) {
       } else {
         const fMatch = /<f\b[^>]*>([\s\S]*?)<\/f>/.exec(masterCellInfo.inner);
         if (fMatch) {
-          text = xmlUnescape(fMatch[1]);
+          text = decodeXlsxEscapes(xmlUnescape(fMatch[1]));
         } else {
           const vMatch = /<v>([\s\S]*?)<\/v>/.exec(masterCellInfo.inner);
           if (vMatch && !/^#[A-Z]+!?\??$/.test(vMatch[1].trim())) {
-            text = xmlUnescape(vMatch[1]);
+            text = decodeXlsxEscapes(xmlUnescape(vMatch[1]));
           }
         }
       }
-      if (text == null || !isBulletList(text)) continue;
+      if (text == null) continue;
 
-      const bullets = splitBullets(text, mode)
-        .map(b => stripBullet ? stripLeadingBullet(b) : b);
+      // Try bullet detection first. If that fails, fall back to splitting
+      // by line when the line count matches the merge's row count exactly
+      // — common in workbooks where teachers typed plain per-row comments
+      // wrapped in outer quotes, no "-" prefix.
+      const expectedRows = r.bottom - r.top + 1;
+      let rawBullets;
+      if (isBulletList(text)) {
+        rawBullets = splitBullets(text, mode);
+      } else {
+        rawBullets = tryLineFallback(text, expectedRows);
+        if (!rawBullets) continue;
+      }
+      const bullets = rawBullets.map(b => stripBullet ? stripLeadingBullet(b) : b);
       const rows = [];
       for (let i = 0; i < r.bottom - r.top + 1; i++) {
         const rowNum = r.top + i;
